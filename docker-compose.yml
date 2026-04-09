@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: moneycontrol_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: moneyuser
+      POSTGRES_PASSWORD: moneypass
+      POSTGRES_DB: moneycontrol
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moneyuser -d moneycontrol"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: moneycontrol_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://moneyuser:moneypass@db:5432/moneycontrol
+      CORS_ORIGINS: "*"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+
+volumes:
+  postgres_data:
