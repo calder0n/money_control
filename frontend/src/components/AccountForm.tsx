@@ -8,7 +8,7 @@ interface Props {
     currency: string
     balance: number
     color: string
-  }) => void
+  }) => Promise<void>
   onCancel: () => void
 }
 
@@ -18,17 +18,29 @@ export default function AccountForm({ onSubmit, onCancel }: Props) {
   const [currency, setCurrency] = useState('USD')
   const [balance, setBalance] = useState('')
   const [color, setColor] = useState('#6c5ce7')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
-    onSubmit({
-      name: name.trim(),
-      type,
-      currency,
-      balance: parseFloat(balance) || 0,
-      color,
-    })
+    setError(null)
+    if (!name.trim()) {
+      setError('El nombre es obligatorio')
+      return
+    }
+    setLoading(true)
+    try {
+      await onSubmit({
+        name: name.trim(),
+        type,
+        currency,
+        balance: parseFloat(balance) || 0,
+        color,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear la cuenta')
+      setLoading(false)
+    }
   }
 
   return (
@@ -37,12 +49,13 @@ export default function AccountForm({ onSubmit, onCancel }: Props) {
         <h3>Nueva Cuenta</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Nombre</label>
+            <label>Nombre *</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ej. Cuenta Principal"
               autoFocus
+              required
             />
           </div>
           <div className="form-row">
@@ -84,12 +97,18 @@ export default function AccountForm({ onSubmit, onCancel }: Props) {
               <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
             </div>
           </div>
+          {error && <div className="form-error">{error}</div>}
           <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onCancel}
+              disabled={loading}
+            >
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary">
-              Crear
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Creando…' : 'Crear'}
             </button>
           </div>
         </form>

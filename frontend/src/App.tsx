@@ -75,37 +75,51 @@ export default function App() {
   }, [refresh])
 
   // ---- Handlers ----
+  // Each create handler re-throws so the form can display the error
+  // and stay open on failure. On success, the form closes and data refreshes.
   const handleCreateAccount = async (data: Parameters<typeof api.createAccount>[0]) => {
     await api.createAccount(data)
     setShowAccountForm(false)
-    refresh()
+    await refresh()
   }
 
   const handleDeleteAccount = async (id: number) => {
-    await api.deleteAccount(id)
-    refresh()
+    try {
+      await api.deleteAccount(id)
+      await refresh()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar la cuenta')
+    }
   }
 
   const handleCreateTransaction = async (data: Parameters<typeof api.createTransaction>[0]) => {
     await api.createTransaction(data)
     setShowTxForm(false)
-    refresh()
+    await refresh()
   }
 
   const handleDeleteTransaction = async (id: number) => {
-    await api.deleteTransaction(id)
-    refresh()
+    try {
+      await api.deleteTransaction(id)
+      await refresh()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar')
+    }
   }
 
   const handleCreateInvestment = async (data: Parameters<typeof api.createInvestment>[0]) => {
     await api.createInvestment(data)
     setShowInvForm(false)
-    refresh()
+    await refresh()
   }
 
   const handleDeleteInvestment = async (id: number) => {
-    await api.deleteInvestment(id)
-    refresh()
+    try {
+      await api.deleteInvestment(id)
+      await refresh()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar')
+    }
   }
 
   // ---- Render helpers ----

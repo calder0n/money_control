@@ -11,7 +11,7 @@ interface Props {
     quantity: number
     currency: string
     purchase_date: string
-  }) => void
+  }) => Promise<void>
   onCancel: () => void
 }
 
@@ -26,20 +26,42 @@ export default function InvestmentForm({ onSubmit, onCancel }: Props) {
   const [purchaseDate, setPurchaseDate] = useState(
     new Date().toISOString().split('T')[0]
   )
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !initial || !current) return
-    onSubmit({
-      name: name.trim(),
-      type,
-      symbol: symbol.trim().toUpperCase(),
-      initial_amount: parseFloat(initial),
-      current_value: parseFloat(current),
-      quantity: parseFloat(quantity) || 1,
-      currency,
-      purchase_date: purchaseDate,
-    })
+    setError(null)
+    if (!name.trim()) {
+      setError('El nombre es obligatorio')
+      return
+    }
+    const parsedInitial = parseFloat(initial)
+    const parsedCurrent = parseFloat(current)
+    if (!parsedInitial || parsedInitial <= 0) {
+      setError('La inversión inicial debe ser mayor a 0')
+      return
+    }
+    if (isNaN(parsedCurrent) || parsedCurrent < 0) {
+      setError('El valor actual es obligatorio')
+      return
+    }
+    setLoading(true)
+    try {
+      await onSubmit({
+        name: name.trim(),
+        type,
+        symbol: symbol.trim().toUpperCase(),
+        initial_amount: parsedInitial,
+        current_value: parsedCurrent,
+        quantity: parseFloat(quantity) || 1,
+        currency,
+        purchase_date: purchaseDate,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear la inversión')
+      setLoading(false)
+    }
   }
 
   return (
@@ -49,12 +71,13 @@ export default function InvestmentForm({ onSubmit, onCancel }: Props) {
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <div className="form-group">
-              <label>Nombre</label>
+              <label>Nombre *</label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ej. Apple"
                 autoFocus
+                required
               />
             </div>
             <div className="form-group">
@@ -91,23 +114,25 @@ export default function InvestmentForm({ onSubmit, onCancel }: Props) {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Inversión Inicial</label>
+              <label>Inversión Inicial *</label>
               <input
                 type="number"
                 step="0.01"
                 value={initial}
                 onChange={(e) => setInitial(e.target.value)}
                 placeholder="1000.00"
+                required
               />
             </div>
             <div className="form-group">
-              <label>Valor Actual</label>
+              <label>Valor Actual *</label>
               <input
                 type="number"
                 step="0.01"
                 value={current}
                 onChange={(e) => setCurrent(e.target.value)}
                 placeholder="1350.00"
+                required
               />
             </div>
           </div>
@@ -131,12 +156,18 @@ export default function InvestmentForm({ onSubmit, onCancel }: Props) {
               />
             </div>
           </div>
+          {error && <div className="form-error">{error}</div>}
           <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onCancel}
+              disabled={loading}
+            >
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary">
-              Crear
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Creando…' : 'Crear'}
             </button>
           </div>
         </form>

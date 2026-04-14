@@ -3,12 +3,32 @@ import type { Account, Transaction, Investment, Summary } from './types'
 const BASE = '/api'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+  let res: Response
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    })
+  } catch (err) {
+    throw new Error(
+      'No se pudo conectar con el backend. Asegúrate de que el API esté corriendo en http://localhost:8000'
+    )
+  }
+
   if (!res.ok) {
-    throw new Error(`API error: ${res.status}`)
+    let detail = `HTTP ${res.status}`
+    try {
+      const body = await res.json()
+      if (body?.detail) {
+        detail =
+          typeof body.detail === 'string'
+            ? body.detail
+            : JSON.stringify(body.detail)
+      }
+    } catch {
+      // ignore json parse errors
+    }
+    throw new Error(detail)
   }
   if (res.status === 204) return undefined as T
   return res.json()

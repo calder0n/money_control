@@ -9,7 +9,7 @@ interface Props {
     type: TransactionType
     category: string
     description: string
-  }) => void
+  }) => Promise<void>
   onCancel: () => void
 }
 
@@ -25,18 +25,34 @@ export default function TransactionForm({ accounts, onSubmit, onCancel }: Props)
   const [type, setType] = useState<TransactionType>('expense')
   const [category, setCategory] = useState('Otro')
   const [description, setDescription] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     const parsedAmount = parseFloat(amount)
-    if (!parsedAmount || !accountId) return
-    onSubmit({
-      account_id: accountId,
-      amount: parsedAmount,
-      type,
-      category,
-      description: description.trim(),
-    })
+    if (!parsedAmount || parsedAmount <= 0) {
+      setError('El monto debe ser mayor a 0')
+      return
+    }
+    if (!accountId) {
+      setError('Selecciona una cuenta')
+      return
+    }
+    setLoading(true)
+    try {
+      await onSubmit({
+        account_id: accountId,
+        amount: parsedAmount,
+        type,
+        category,
+        description: description.trim(),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear el movimiento')
+      setLoading(false)
+    }
   }
 
   return (
@@ -45,7 +61,7 @@ export default function TransactionForm({ accounts, onSubmit, onCancel }: Props)
         <h3>Nuevo Movimiento</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Cuenta</label>
+            <label>Cuenta *</label>
             <select value={accountId} onChange={(e) => setAccountId(Number(e.target.value))}>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -56,7 +72,7 @@ export default function TransactionForm({ accounts, onSubmit, onCancel }: Props)
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Monto</label>
+              <label>Monto *</label>
               <input
                 type="number"
                 step="0.01"
@@ -65,6 +81,7 @@ export default function TransactionForm({ accounts, onSubmit, onCancel }: Props)
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 autoFocus
+                required
               />
             </div>
             <div className="form-group">
@@ -94,12 +111,18 @@ export default function TransactionForm({ accounts, onSubmit, onCancel }: Props)
               />
             </div>
           </div>
+          {error && <div className="form-error">{error}</div>}
           <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onCancel}
+              disabled={loading}
+            >
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary">
-              Crear
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Creando…' : 'Crear'}
             </button>
           </div>
         </form>
