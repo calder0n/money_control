@@ -13,6 +13,9 @@ class AccountBase(BaseModel):
     balance: float = 0.0
     color: Optional[str] = "#1a1a2e"
     icon: Optional[str] = "card"
+    yield_tier_limit: Optional[float] = None
+    yield_tier_rate: Optional[float] = None
+    yield_base_rate: Optional[float] = None
 
 
 class AccountCreate(AccountBase):
@@ -26,12 +29,17 @@ class AccountUpdate(BaseModel):
     balance: Optional[float] = None
     color: Optional[str] = None
     icon: Optional[str] = None
+    yield_tier_limit: Optional[float] = None
+    yield_tier_rate: Optional[float] = None
+    yield_base_rate: Optional[float] = None
 
 
 class AccountOut(AccountBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    projected_annual_yield: float = 0.0
+    effective_yield_rate: float = 0.0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -122,6 +130,8 @@ class Summary(BaseModel):
     total_investments_return: float
     total_investments_return_percentage: float
     average_annual_growth_percentage: float
+    total_projected_annual_yield: float
+    average_effective_yield_rate: float
     total_net_worth: float
     accounts_count: int
     investments_count: int

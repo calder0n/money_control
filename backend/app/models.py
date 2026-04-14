@@ -48,6 +48,11 @@ class Account(Base):
     balance = Column(Float, nullable=False, default=0.0)
     color = Column(String(20), nullable=True, default="#1a1a2e")
     icon = Column(String(50), nullable=True, default="card")
+    # Tiered yield: first `yield_tier_limit` units earn `yield_tier_rate`%,
+    # remainder earns `yield_base_rate`%. All expressed as APY.
+    yield_tier_limit = Column(Float, nullable=True)
+    yield_tier_rate = Column(Float, nullable=True)
+    yield_base_rate = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models, schemas
-from app.utils import calculate_investment_metrics
+from app.utils import calculate_investment_metrics, calculate_account_yield
 
 router = APIRouter(prefix="/summary", tags=["summary"])
 
@@ -18,11 +18,29 @@ def get_summary(db: Session = Depends(get_db)):
     totals_by_type = defaultdict(float)
     balances_by_currency = defaultdict(float)
     total_accounts_balance = 0.0
+    total_projected_yield = 0.0
+    yield_accounts_balance = 0.0
 
     for acc in accounts:
         totals_by_type[acc.type.value] += acc.balance
         balances_by_currency[acc.currency] += acc.balance
         total_accounts_balance += acc.balance
+
+        yield_metrics = calculate_account_yield(
+            acc.balance,
+            acc.yield_tier_limit,
+            acc.yield_tier_rate,
+            acc.yield_base_rate,
+        )
+        if yield_metrics["projected_annual_yield"] > 0:
+            total_projected_yield += yield_metrics["projected_annual_yield"]
+            yield_accounts_balance += acc.balance
+
+    avg_effective_yield = (
+        (total_projected_yield / yield_accounts_balance) * 100
+        if yield_accounts_balance > 0
+        else 0.0
+    )
 
     total_initial = 0.0
     total_current = 0.0
@@ -55,6 +73,8 @@ def get_summary(db: Session = Depends(get_db)):
         total_investments_return=round(total_return, 2),
         total_investments_return_percentage=round(total_return_pct, 2),
         average_annual_growth_percentage=round(avg_annual_growth, 2),
+        total_projected_annual_yield=round(total_projected_yield, 2),
+        average_effective_yield_rate=round(avg_effective_yield, 2),
         total_net_worth=round(total_accounts_balance + total_current, 2),
         accounts_count=len(accounts),
         investments_count=len(investments),
