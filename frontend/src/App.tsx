@@ -50,6 +50,7 @@ export default function App() {
   const [investments, setInvestments] = useState<Investment[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
   const [showAccountForm, setShowAccountForm] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [showTxForm, setShowTxForm] = useState(false)
   const [showInvForm, setShowInvForm] = useState(false)
 
@@ -77,10 +78,20 @@ export default function App() {
   // ---- Handlers ----
   // Each create handler re-throws so the form can display the error
   // and stay open on failure. On success, the form closes and data refreshes.
-  const handleCreateAccount = async (data: Parameters<typeof api.createAccount>[0]) => {
-    await api.createAccount(data)
+  const handleSaveAccount = async (data: Parameters<typeof api.createAccount>[0]) => {
+    if (editingAccount) {
+      await api.updateAccount(editingAccount.id, data)
+    } else {
+      await api.createAccount(data)
+    }
     setShowAccountForm(false)
+    setEditingAccount(null)
     await refresh()
+  }
+
+  const closeAccountForm = () => {
+    setShowAccountForm(false)
+    setEditingAccount(null)
   }
 
   const handleDeleteAccount = async (id: number) => {
@@ -170,6 +181,17 @@ export default function App() {
           {(summary?.average_annual_growth_percentage ?? 0).toFixed(2)}%
         </div>
       </div>
+      {(summary?.total_projected_annual_yield ?? 0) > 0 && (
+        <div className="stat-card">
+          <div className="stat-label">Rendimiento Bancos (Anual)</div>
+          <div className="stat-value positive">
+            +{formatMoney(summary?.total_projected_annual_yield ?? 0)}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            {(summary?.average_effective_yield_rate ?? 0).toFixed(2)}% APY promedio
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -189,7 +211,14 @@ export default function App() {
       ) : (
         <div className="accounts-scroll">
           {accounts.map((acc) => (
-            <div key={acc.id} className="account-card">
+            <div
+              key={acc.id}
+              className="account-card clickable"
+              onClick={() => {
+                setEditingAccount(acc)
+                setShowAccountForm(true)
+              }}
+            >
               <div
                 className="account-card-dot"
                 style={{ background: acc.color || '#6c5ce7' }}
@@ -202,7 +231,24 @@ export default function App() {
               <div className="account-name">{acc.name}</div>
               <div className="account-balance">{formatMoney(acc.balance, acc.currency)}</div>
               <div className="account-currency">{acc.currency}</div>
-              <button className="delete-btn" onClick={() => handleDeleteAccount(acc.id)}>
+              {acc.projected_annual_yield > 0 && (
+                <div className="account-yield">
+                  <span className="yield-label">Rendimiento anual</span>
+                  <span className="yield-value">
+                    +{formatMoney(acc.projected_annual_yield, acc.currency)}
+                  </span>
+                  <span className="yield-rate">
+                    {acc.effective_yield_rate.toFixed(2)}% APY
+                  </span>
+                </div>
+              )}
+              <button
+                className="delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDeleteAccount(acc.id)
+                }}
+              >
                 Eliminar
               </button>
             </div>
@@ -393,8 +439,9 @@ export default function App() {
 
       {showAccountForm && (
         <AccountForm
-          onSubmit={handleCreateAccount}
-          onCancel={() => setShowAccountForm(false)}
+          initial={editingAccount ?? undefined}
+          onSubmit={handleSaveAccount}
+          onCancel={closeAccountForm}
         />
       )}
       {showTxForm && (

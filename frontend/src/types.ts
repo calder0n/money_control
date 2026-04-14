@@ -10,6 +10,11 @@ export interface Account {
   balance: number
   color: string | null
   icon: string | null
+  yield_tier_limit: number | null
+  yield_tier_rate: number | null
+  yield_base_rate: number | null
+  projected_annual_yield: number
+  effective_yield_rate: number
   created_at: string
   updated_at: string
 }
@@ -59,6 +64,8 @@ export interface Summary {
   total_investments_return: number
   total_investments_return_percentage: number
   average_annual_growth_percentage: number
+  total_projected_annual_yield: number
+  average_effective_yield_rate: number
   total_net_worth: number
   accounts_count: number
   investments_count: number

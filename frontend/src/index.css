@@ -710,6 +710,100 @@ body {
   cursor: not-allowed;
 }
 
+/* ===== Yield (Rendimientos) ===== */
+.account-card.clickable {
+  cursor: pointer;
+}
+
+.account-yield {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.account-yield .yield-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.account-yield .yield-value {
+  font-size: 1rem;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.account-yield .yield-rate {
+  font-size: 0.72rem;
+  color: var(--green);
+  opacity: 0.75;
+}
+
+.yield-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(108, 92, 231, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.yield-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 500;
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.yield-toggle input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.yield-help {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0.75rem 0;
+  line-height: 1.5;
+}
+
+.yield-preview {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--green-bg);
+  border: 1px solid rgba(0, 206, 201, 0.25);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.yield-preview strong {
+  color: var(--green);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.yield-preview small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
 /* ===== Empty State ===== */
 .empty-state {
   text-align: center;

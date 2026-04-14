@@ -1,25 +1,47 @@
 import React, { useState } from 'react'
-import type { AccountType } from '../types'
+import type { Account, AccountType } from '../types'
+
+export interface AccountFormData {
+  name: string
+  type: AccountType
+  currency: string
+  balance: number
+  color: string
+  yield_tier_limit: number | null
+  yield_tier_rate: number | null
+  yield_base_rate: number | null
+}
 
 interface Props {
-  onSubmit: (data: {
-    name: string
-    type: AccountType
-    currency: string
-    balance: number
-    color: string
-  }) => Promise<void>
+  initial?: Account
+  onSubmit: (data: AccountFormData) => Promise<void>
   onCancel: () => void
 }
 
-export default function AccountForm({ onSubmit, onCancel }: Props) {
-  const [name, setName] = useState('')
-  const [type, setType] = useState<AccountType>('bank')
-  const [currency, setCurrency] = useState('USD')
-  const [balance, setBalance] = useState('')
-  const [color, setColor] = useState('#6c5ce7')
+export default function AccountForm({ initial, onSubmit, onCancel }: Props) {
+  const [name, setName] = useState(initial?.name ?? '')
+  const [type, setType] = useState<AccountType>(initial?.type ?? 'bank')
+  const [currency, setCurrency] = useState(initial?.currency ?? 'USD')
+  const [balance, setBalance] = useState(
+    initial?.balance !== undefined ? String(initial.balance) : ''
+  )
+  const [color, setColor] = useState(initial?.color ?? '#6c5ce7')
+  const [enableYield, setEnableYield] = useState(
+    initial?.yield_tier_rate != null || initial?.yield_base_rate != null
+  )
+  const [tierLimit, setTierLimit] = useState(
+    initial?.yield_tier_limit != null ? String(initial.yield_tier_limit) : ''
+  )
+  const [tierRate, setTierRate] = useState(
+    initial?.yield_tier_rate != null ? String(initial.yield_tier_rate) : ''
+  )
+  const [baseRate, setBaseRate] = useState(
+    initial?.yield_base_rate != null ? String(initial.yield_base_rate) : ''
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const showYieldSection = type === 'bank' || type === 'savings'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,24 +51,55 @@ export default function AccountForm({ onSubmit, onCancel }: Props) {
       return
     }
     setLoading(true)
+    const data: AccountFormData = {
+      name: name.trim(),
+      type,
+      currency,
+      balance: parseFloat(balance) || 0,
+      color,
+      yield_tier_limit:
+        showYieldSection && enableYield && tierLimit !== ''
+          ? parseFloat(tierLimit)
+          : null,
+      yield_tier_rate:
+        showYieldSection && enableYield && tierRate !== ''
+          ? parseFloat(tierRate)
+          : null,
+      yield_base_rate:
+        showYieldSection && enableYield && baseRate !== ''
+          ? parseFloat(baseRate)
+          : null,
+    }
     try {
-      await onSubmit({
-        name: name.trim(),
-        type,
-        currency,
-        balance: parseFloat(balance) || 0,
-        color,
-      })
+      await onSubmit(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear la cuenta')
+      setError(err instanceof Error ? err.message : 'Error al guardar la cuenta')
       setLoading(false)
+    }
+  }
+
+  // Real-time preview of projected annual yield
+  const balanceNum = parseFloat(balance) || 0
+  const limitNum = parseFloat(tierLimit)
+  const tierNum = parseFloat(tierRate) / 100
+  const baseNum = parseFloat(baseRate) / 100
+  let previewYield = 0
+  if (showYieldSection && enableYield && balanceNum > 0) {
+    const tRate = isNaN(tierNum) ? 0 : tierNum
+    const bRate = isNaN(baseNum) ? 0 : baseNum
+    if (!isNaN(limitNum) && limitNum > 0) {
+      previewYield =
+        Math.min(balanceNum, limitNum) * tRate +
+        Math.max(balanceNum - limitNum, 0) * bRate
+    } else {
+      previewYield = balanceNum * (tRate || bRate)
     }
   }
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Nueva Cuenta</h3>
+        <h3>{initial ? 'Editar Cuenta' : 'Nueva Cuenta'}</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Nombre *</label>
@@ -83,7 +136,7 @@ export default function AccountForm({ onSubmit, onCancel }: Props) {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Balance Inicial</label>
+              <label>Balance Total</label>
               <input
                 type="number"
                 step="0.01"
@@ -97,6 +150,80 @@ export default function AccountForm({ onSubmit, onCancel }: Props) {
               <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
             </div>
           </div>
+
+          {showYieldSection && (
+            <div className="yield-section">
+              <label className="yield-toggle">
+                <input
+                  type="checkbox"
+                  checked={enableYield}
+                  onChange={(e) => setEnableYield(e.target.checked)}
+                />
+                <span>Esta cuenta genera rendimientos</span>
+              </label>
+
+              {enableYield && (
+                <>
+                  <p className="yield-help">
+                    El banco paga una tasa hasta cierto límite de saldo y otra tasa
+                    diferente para el resto. Deja el límite en blanco si se aplica
+                    una sola tasa a todo el saldo.
+                  </p>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Límite del tramo</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={tierLimit}
+                        onChange={(e) => setTierLimit(e.target.value)}
+                        placeholder="Ej. 10000"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Tasa tramo (% anual)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={tierRate}
+                        onChange={(e) => setTierRate(e.target.value)}
+                        placeholder="Ej. 10"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Tasa resto del saldo (% anual)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={baseRate}
+                      onChange={(e) => setBaseRate(e.target.value)}
+                      placeholder="Ej. 3"
+                    />
+                  </div>
+                  {balanceNum > 0 && (
+                    <div className="yield-preview">
+                      <span>Rendimiento anual estimado:</span>
+                      <strong>
+                        {new Intl.NumberFormat('en-US', {
+                          style: 'currency',
+                          currency,
+                        }).format(previewYield)}
+                      </strong>
+                      <small>
+                        (
+                        {balanceNum > 0
+                          ? ((previewYield / balanceNum) * 100).toFixed(2)
+                          : '0.00'}
+                        % efectiva)
+                      </small>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {error && <div className="form-error">{error}</div>}
           <div className="form-actions">
             <button
@@ -108,7 +235,7 @@ export default function AccountForm({ onSubmit, onCancel }: Props) {
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Creando…' : 'Crear'}
+              {loading ? 'Guardando…' : initial ? 'Guardar' : 'Crear'}
             </button>
           </div>
         </form>
